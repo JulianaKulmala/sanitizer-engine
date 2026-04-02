@@ -13,7 +13,7 @@ source "${SCRIPT_DIR}/../libs/db_lib.sh"
 
 
 # Run your aiSanitizerEngine logic (e.g., masking IPs)
-sed -i '' 's/[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}/[MASKED_IP]/g' "$FILE"
+sed -i -E  's/[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}/[MASKED_IP]/g' "$FILE"
 
 # Encode file once
 B64_DATA="$(base64 < "$FILE" | tr -d '\n')"
@@ -45,6 +45,17 @@ echo "Updated job_request.id=${JOB_ID} status to COMPLETED"
 
 
 delete_job_request_by_id "$JOB_ID"
+
 echo "Deleted job_request.id=${JOB_ID}"
 
 echo ${JOB_ID}
+
+./sendkafka.sh "$FILE_CONTENT_B64"
+
+if [ $? -eq 0 ]; then
+    echo "Success: Data transitioned from DB to Kafka."
+    update_job_request_status "$JOB_ID" "COMPLETED"
+else
+    echo "Error: Kafka publication failed." >&2
+    exit 1
+fi
