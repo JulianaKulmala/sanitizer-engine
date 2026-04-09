@@ -48,8 +48,12 @@ sanitize_base64() {
     fi
 
     # 2. Antivirus (ClamAV)
-    # Using --infected to only output if a virus is found
-
+    if ! clamscan --infected --no-summary "$RAW_FILE"; then
+        echo "{\"job_id\": \"$SAFE_JOB_ID\", \"status\": \"REJECTED\", \"threat\": \"Virus Detected\"}"
+        update_job_request_status "$SAFE_JOB_ID" "$STATUS_FAILED_SANITIZATION"
+        rm -rf "$JOB_DIR"
+        return 1
+    fi
 
     # 3. YARA Analysis
     if [ -f "$RULES_FILE" ]; then
@@ -73,9 +77,14 @@ sanitize_base64() {
         application/pdf)
             qpdf --linearize --replace-input "$RAW_FILE" --output-file "$CLEAN_FILE" >/dev/null 2>&1
             ;;
-        text/html|application/json|text/x-log|application/vnd.tcpdump.pcap|text/plain)
-            # Call our Python helper for structured/complex data
-            
+            ;text/html|application/json|text/x-log|application/vnd.tcpdump.pcap|text/plain)
+            # Added "$MIME" as the third argument
+            if ! python3 "${SCRIPT_DIR}/complex_sanitizer.py" "$RAW_FILE" "$CLEAN_FILE" "$MIME"; then
+                echo "{\"job_id\": \"$SAFE_JOB_ID\", \"status\": \"REJECTED\", \"threat\": \"Python Sanitization Failed\"}"
+                update_job_request_status "$SAFE_JOB_ID" "$STATUS_FAILED_SANITIZATION"
+                rm -rf "$JOB_DIR"
+                return 1
+            fi
             ;;
         *)
             # Fallback: Strip dangerous control characters (Null, ESC, etc.)

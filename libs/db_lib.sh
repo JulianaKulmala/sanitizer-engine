@@ -95,12 +95,12 @@ delete_job_request_by_id() {
 }
 
 update_job_request_status() {
-  local job_id="$1"
-  local status="$2"
+  local target_job_id="$1"
+  local new_status="$2"
   run_mysql "
     UPDATE job_request
-    SET status = '$status'
-    WHERE id = ${job_id};
+    SET status = '$new_status'
+    WHERE id = ${target_job_id};
   "
 }
 
