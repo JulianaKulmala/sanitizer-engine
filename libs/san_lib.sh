@@ -77,7 +77,7 @@ sanitize_base64() {
         application/pdf)
             qpdf --linearize --replace-input "$RAW_FILE" --output-file "$CLEAN_FILE" >/dev/null 2>&1
             ;;
-            ;text/html|application/json|text/x-log|application/vnd.tcpdump.pcap|text/plain)
+            text/html|application/json|text/x-log|application/vnd.tcpdump.pcap|text/plain)
             # Added "$MIME" as the third argument
             if ! python3 "${SCRIPT_DIR}/complex_sanitizer.py" "$RAW_FILE" "$CLEAN_FILE" "$MIME"; then
                 echo "{\"job_id\": \"$SAFE_JOB_ID\", \"status\": \"REJECTED\", \"threat\": \"Python Sanitization Failed\"}"
